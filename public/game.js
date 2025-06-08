@@ -1,135 +1,47 @@
 const socket = io();
-const config = {
-  type: Phaser.AUTO,
-  width: 800,
-  height: 600,
-  backgroundColor: 0xc2b280,
-  physics: {
-    default: 'arcade',
-    arcade: {
-      gravity: { y: 0 },
-      debug: false,
-    },
-  },
-  scene: {
-    preload: preload,
-    create: create,
-    update: update,
-  },
-};
 
-const game = new Phaser.Game(config);
-let cursors;
+let scene, camera, renderer;
 let player;
-let otherPlayers;
-let buildings;
-let monsters;
+const otherPlayers = {};
+const buildings = {};
+const monsters = {};
 let joystick;
 const joystickForce = { x: 0, y: 0 };
 const inventory = [];
-const buildingMap = {};
-const monsterMap = {};
 let offlineMode = false;
 
-function preload() {
-  // no external assets
-}
+init();
+animate();
 
-function create() {
-  const self = this;
-  cursors = this.input.keyboard.createCursorKeys();
-  otherPlayers = this.physics.add.group();
-  buildings = this.physics.add.staticGroup();
-  monsters = this.physics.add.group();
+function init() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xc2b280);
 
-  // generate textures using pixel art styled graphics
-  const g = this.add.graphics({ x: 0, y: 0 });
+  camera = new THREE.PerspectiveCamera(
+    75,
+    window.innerWidth / window.innerHeight,
+    1,
+    5000
+  );
+  camera.position.set(0, 60, 80);
 
-  const p = 4; // pixel size
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
 
-  // player texture (blue shirt)
-  g.fillStyle(0xffcc99, 1); // head
-  g.fillRect(2 * p, 0, 4 * p, 3 * p);
-  g.fillStyle(0x3333ff, 1); // body
-  g.fillRect(2 * p, 3 * p, 4 * p, 3 * p);
-  g.fillStyle(0xffcc99, 1); // arms
-  g.fillRect(p, 3 * p, p, 3 * p);
-  g.fillRect(6 * p, 3 * p, p, 3 * p);
-  g.fillStyle(0x555555, 1); // legs
-  g.fillRect(2 * p, 6 * p, 2 * p, 3 * p);
-  g.fillRect(4 * p, 6 * p, 2 * p, 3 * p);
-  g.generateTexture('playerTexture', 8 * p, 9 * p);
-  g.clear();
+  window.addEventListener('resize', onWindowResize);
+  document.addEventListener('pointerdown', onPointerDown);
 
-  // other player texture (green shirt)
-  g.fillStyle(0xffcc99, 1); // head
-  g.fillRect(2 * p, 0, 4 * p, 3 * p);
-  g.fillStyle(0x00aa00, 1); // body
-  g.fillRect(2 * p, 3 * p, 4 * p, 3 * p);
-  g.fillStyle(0xffcc99, 1); // arms
-  g.fillRect(p, 3 * p, p, 3 * p);
-  g.fillRect(6 * p, 3 * p, p, 3 * p);
-  g.fillStyle(0x555555, 1); // legs
-  g.fillRect(2 * p, 6 * p, 2 * p, 3 * p);
-  g.fillRect(4 * p, 6 * p, 2 * p, 3 * p);
-  g.generateTexture('otherTexture', 8 * p, 9 * p);
-  g.clear();
+  const light = new THREE.HemisphereLight(0xffffff, 0x444444);
+  light.position.set(0, 200, 0);
+  scene.add(light);
 
-  // building full
-  g.fillStyle(0x8b4513, 1); // walls
-  g.fillRect(0, 3 * p, 8 * p, 5 * p);
-  g.fillStyle(0x654321, 1); // roof
-  g.fillTriangle(-p, 3 * p, 4 * p, 0, 9 * p, 3 * p);
-  g.fillStyle(0x3d2314, 1); // door
-  g.fillRect(3 * p, 5 * p, 2 * p, 3 * p);
-  g.fillStyle(0xdddddd, 1); // windows
-  g.fillRect(p, 4 * p, p, p);
-  g.fillRect(6 * p, 4 * p, p, p);
-  g.generateTexture('building_full', 8 * p, 8 * p);
-  g.clear();
+  const groundGeo = new THREE.PlaneGeometry(2000, 2000);
+  const groundMat = new THREE.MeshLambertMaterial({ color: 0x668800 });
+  const ground = new THREE.Mesh(groundGeo, groundMat);
+  ground.rotation.x = -Math.PI / 2;
+  scene.add(ground);
 
-  // building damaged (missing window and cracked roof)
-  g.fillStyle(0x8b4513, 1);
-  g.fillRect(0, 3 * p, 8 * p, 5 * p);
-  g.fillStyle(0x654321, 1);
-  g.fillTriangle(-p, 3 * p, 4 * p, p, 9 * p, 3 * p);
-  g.fillStyle(0x3d2314, 1);
-  g.fillRect(3 * p, 5 * p, 2 * p, 3 * p);
-  g.fillStyle(0xdddddd, 1);
-  g.fillRect(6 * p, 4 * p, p, p);
-  g.fillStyle(0x000000, 1); // crack
-  g.fillRect(2 * p, 3 * p, p / 2, 2 * p);
-  g.generateTexture('building_damaged', 8 * p, 8 * p);
-  g.clear();
-
-  // building destroyed (rubble)
-  g.fillStyle(0x555555, 1);
-  g.fillRect(0, 6 * p, 8 * p, 2 * p);
-  g.fillRect(2 * p, 5 * p, p, p);
-  g.fillRect(5 * p, 4 * p, 2 * p, p);
-  g.generateTexture('building_destroyed', 8 * p, 8 * p);
-  g.clear();
-
-  // monster
-  g.fillStyle(0x00aa00, 1); // body
-  g.fillRect(p, p, 6 * p, 6 * p);
-  g.fillStyle(0x006600, 1); // outline at bottom
-  g.fillRect(p, 6 * p, 6 * p, p);
-  g.fillStyle(0x000000, 1); // eyes
-  g.fillRect(2 * p, 3 * p, p, p);
-  g.fillRect(5 * p, 3 * p, p, p);
-  g.fillStyle(0xff0000, 1); // mouth
-  g.fillRect(3 * p, 5 * p, 2 * p, p);
-  g.generateTexture('monster', 8 * p, 8 * p);
-  g.destroy();
-
-  // world bounds
-  this.physics.world.setBounds(0, 0, 2000, 2000);
-  this.cameras.main.setBounds(0, 0, 2000, 2000);
-
-  // buildings and monsters will be created when server sends world data
-
-  // joystick using nipplejs
   joystick = nipplejs.create({
     zone: document.getElementById('joystick'),
     mode: 'static',
@@ -137,7 +49,7 @@ function create() {
     color: 'white',
   });
   joystick.on('move', (evt, data) => {
-    const rad = Phaser.Math.DegToRad(data.angle.degree);
+    const rad = data.angle.radian;
     joystickForce.x = Math.cos(rad);
     joystickForce.y = -Math.sin(rad);
   });
@@ -146,126 +58,168 @@ function create() {
     joystickForce.y = 0;
   });
 
-  socket.on('currentPlayers', function (players) {
-    Object.keys(players).forEach(function (id) {
+  socket.on('currentPlayers', players => {
+    Object.keys(players).forEach(id => {
       if (id === socket.id) {
-        addPlayer(self, players[id]);
+        addPlayer(players[id]);
       } else {
-        addOtherPlayers(self, players[id], id);
+        addOtherPlayer(players[id], id);
       }
     });
   });
 
-  socket.on('newPlayer', function (playerInfo) {
-    addOtherPlayers(self, playerInfo.data, playerInfo.id);
+  socket.on('newPlayer', info => {
+    addOtherPlayer(info.data, info.id);
   });
 
-  socket.on('playerDisconnected', function (playerId) {
-    otherPlayers.getChildren().forEach(function (other) {
-      if (playerId === other.playerId) {
-        other.destroy();
-      }
-    });
-  });
-
-  socket.on('playerMoved', function (playerInfo) {
-    otherPlayers.getChildren().forEach(function (other) {
-      if (playerInfo.id === other.playerId) {
-        other.setPosition(playerInfo.x, playerInfo.y);
-      }
-    });
-  });
-
-  socket.on('worldData', function (data) {
-    data.buildings.forEach(info => createBuilding(self, info));
-    data.monsters.forEach(info => createMonster(self, info));
-  });
-
-  socket.on('buildingUpdated', function (info) {
-    const b = buildingMap[info.id];
-    if (b) {
-      const textures = ['building_full', 'building_damaged', 'building_destroyed'];
-      b.setTexture(textures[info.state]);
-      b.setData('state', info.state);
+  socket.on('playerDisconnected', id => {
+    if (otherPlayers[id]) {
+      scene.remove(otherPlayers[id]);
+      delete otherPlayers[id];
     }
   });
 
-  socket.on('updateInventory', function (items) {
+  socket.on('playerMoved', info => {
+    const other = otherPlayers[info.id];
+    if (other) {
+      other.position.set(info.x, 10, -info.y);
+    }
+  });
+
+  socket.on('worldData', data => {
+    data.buildings.forEach(createBuilding);
+    data.monsters.forEach(createMonster);
+  });
+
+  socket.on('buildingUpdated', info => {
+    const b = buildings[info.id];
+    if (b) {
+      b.userData.state = info.state;
+      const colors = [0x8b4513, 0x996633, 0x555555];
+      b.material.color.setHex(colors[info.state]);
+    }
+  });
+
+  socket.on('updateInventory', items => {
     inventory.length = 0;
     items.forEach(i => inventory.push(i));
-    document.getElementById('inventory').innerText = 'Inventory: ' + inventory.join(', ');
+    document.getElementById('inventory').innerText =
+      'Inventory: ' + inventory.join(', ');
   });
 
-  // if server never responds, fall back to a local world after a short delay
-  this.time.delayedCall(1500, () => {
+  setTimeout(() => {
     if (!player) {
       offlineMode = true;
-      initOfflineWorld(self);
+      initOfflineWorld();
     }
-  });
+  }, 1500);
 }
 
-function addPlayer(self, playerInfo) {
-  player = self.physics.add.image(playerInfo.x, playerInfo.y, 'playerTexture').setOrigin(0.5, 0.5).setDisplaySize(40, 40);
-  player.setCollideWorldBounds(true);
-  self.cameras.main.startFollow(player);
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-function addOtherPlayers(self, playerInfo, id) {
-  const other = self.add.sprite(playerInfo.x, playerInfo.y, 'otherTexture').setOrigin(0.5, 0.5).setDisplaySize(40, 40);
-  other.playerId = id;
-  otherPlayers.add(other);
+function onPointerDown(event) {
+  const mouse = new THREE.Vector2();
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, camera);
+  const objs = Object.values(buildings);
+  const intersects = raycaster.intersectObjects(objs);
+  if (intersects.length > 0) {
+    const b = intersects[0].object;
+    socket.emit('damageBuilding', b.userData.id);
+  }
 }
 
-function createBuilding(self, info) {
-  const textures = ['building_full', 'building_damaged', 'building_destroyed'];
-  const b = buildings.create(info.x, info.y, textures[info.state]);
-  b.setData('id', info.id);
-  b.setData('state', info.state);
-  b.setInteractive();
-  b.on('pointerdown', () => {
-    socket.emit('damageBuilding', b.getData('id'));
-  });
-  buildingMap[info.id] = b;
+function addPlayer(info) {
+  const geom = new THREE.BoxGeometry(10, 10, 10);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x3333ff });
+  player = new THREE.Mesh(geom, mat);
+  player.position.set(info.x, 5, -info.y);
+  scene.add(player);
+  updateCamera();
 }
 
-function createMonster(self, info) {
-  const m = monsters.create(info.x, info.y, 'monster');
-  monsterMap[info.id] = m;
+function addOtherPlayer(info, id) {
+  const geom = new THREE.BoxGeometry(10, 10, 10);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x00aa00 });
+  const other = new THREE.Mesh(geom, mat);
+  other.position.set(info.x, 5, -info.y);
+  otherPlayers[id] = other;
+  scene.add(other);
 }
 
-function initOfflineWorld(self) {
-  // mimic the server's random world generation for offline play
+function createBuilding(info) {
+  const colors = [0x8b4513, 0x996633, 0x555555];
+  const geom = new THREE.BoxGeometry(60, 60, 60);
+  const mat = new THREE.MeshLambertMaterial({ color: colors[info.state] });
+  const mesh = new THREE.Mesh(geom, mat);
+  mesh.position.set(info.x, 30, -info.y);
+  mesh.userData = { id: info.id, state: info.state };
+  buildings[info.id] = mesh;
+  scene.add(mesh);
+}
+
+function createMonster(info) {
+  const geom = new THREE.SphereGeometry(15, 12, 12);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x00aa00 });
+  const m = new THREE.Mesh(geom, mat);
+  m.position.set(info.x, 15, -info.y);
+  monsters[info.id] = m;
+  scene.add(m);
+}
+
+function initOfflineWorld() {
   function randomPos() {
-    return Phaser.Math.Between(100, 1900);
+    return Math.floor(Math.random() * 1800) + 100;
   }
-  addPlayer(self, { x: 1000, y: 1000 });
+  addPlayer({ x: 1000, y: 1000 });
   for (let i = 0; i < 20; i++) {
-    createBuilding(self, { id: i, x: randomPos(), y: randomPos(), state: 0 });
+    createBuilding({ id: i, x: randomPos(), y: randomPos(), state: 0 });
   }
   for (let i = 0; i < 20; i++) {
-    createMonster(self, { id: i, x: randomPos(), y: randomPos() });
+    createMonster({ id: i, x: randomPos(), y: randomPos() });
   }
   document.getElementById('inventory').innerText = 'Offline Mode';
 }
 
-function update() {
+function updateCamera() {
+  camera.position.x = player.position.x;
+  camera.position.z = player.position.z + 80;
+  camera.lookAt(player.position);
+}
+
+function animate() {
+  requestAnimationFrame(animate);
   if (player) {
-    const speed = 200;
-    player.body.setVelocity(0);
-    if (cursors.left.isDown || joystickForce.x < -0.3) {
-      player.body.setVelocityX(-speed);
-    } else if (cursors.right.isDown || joystickForce.x > 0.3) {
-      player.body.setVelocityX(speed);
+    const speed = 1.5;
+    let vx = 0;
+    let vz = 0;
+    if (joystickForce.x < -0.3) {
+      vx = -speed;
+    } else if (joystickForce.x > 0.3) {
+      vx = speed;
     }
-    if (cursors.up.isDown || joystickForce.y < -0.3) {
-      player.body.setVelocityY(-speed);
-    } else if (cursors.down.isDown || joystickForce.y > 0.3) {
-      player.body.setVelocityY(speed);
+    if (joystickForce.y < -0.3) {
+      vz = speed;
+    } else if (joystickForce.y > 0.3) {
+      vz = -speed;
     }
-    player.body.velocity.normalize().scale(speed);
-    if (!offlineMode) {
-      socket.emit('playerMovement', { x: player.x, y: player.y });
+    player.position.x += vx;
+    player.position.z += vz;
+    if (vx !== 0 || vz !== 0) {
+      updateCamera();
+      if (!offlineMode) {
+        socket.emit('playerMovement', {
+          x: player.position.x,
+          y: -player.position.z,
+        });
+      }
     }
   }
+  renderer.render(scene, camera);
 }
