@@ -29,6 +29,7 @@ const joystickForce = { x: 0, y: 0 };
 const inventory = [];
 const buildingMap = {};
 const monsterMap = {};
+let offlineMode = false;
 
 function preload() {
   // no external assets
@@ -140,6 +141,14 @@ function create() {
     items.forEach(i => inventory.push(i));
     document.getElementById('inventory').innerText = 'Inventory: ' + inventory.join(', ');
   });
+
+  // if server never responds, fall back to a local world after a short delay
+  this.time.delayedCall(1500, () => {
+    if (!player) {
+      offlineMode = true;
+      initOfflineWorld(self);
+    }
+  });
 }
 
 function addPlayer(self, playerInfo) {
@@ -171,6 +180,21 @@ function createMonster(self, info) {
   monsterMap[info.id] = m;
 }
 
+function initOfflineWorld(self) {
+  // mimic the server's random world generation for offline play
+  function randomPos() {
+    return Phaser.Math.Between(100, 1900);
+  }
+  addPlayer(self, { x: 1000, y: 1000 });
+  for (let i = 0; i < 20; i++) {
+    createBuilding(self, { id: i, x: randomPos(), y: randomPos(), state: 0 });
+  }
+  for (let i = 0; i < 20; i++) {
+    createMonster(self, { id: i, x: randomPos(), y: randomPos() });
+  }
+  document.getElementById('inventory').innerText = 'Offline Mode';
+}
+
 function update() {
   if (player) {
     const speed = 200;
@@ -186,6 +210,8 @@ function update() {
       player.body.setVelocityY(speed);
     }
     player.body.velocity.normalize().scale(speed);
-    socket.emit('playerMovement', { x: player.x, y: player.y });
+    if (!offlineMode) {
+      socket.emit('playerMovement', { x: player.x, y: player.y });
+    }
   }
 }
