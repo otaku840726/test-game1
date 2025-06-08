@@ -3,6 +3,7 @@ const config = {
   type: Phaser.AUTO,
   width: 800,
   height: 600,
+  backgroundColor: 0x228b22,
   physics: {
     default: 'arcade',
     arcade: {
@@ -26,6 +27,8 @@ let monsters;
 let joystick;
 const joystickForce = { x: 0, y: 0 };
 const inventory = [];
+const buildingMap = {};
+const monsterMap = {};
 
 function preload() {
   // no external assets
@@ -69,31 +72,7 @@ function create() {
   this.physics.world.setBounds(0, 0, 2000, 2000);
   this.cameras.main.setBounds(0, 0, 2000, 2000);
 
-  // random buildings
-  for (let i = 0; i < 20; i++) {
-    const bx = Phaser.Math.Between(100, 1900);
-    const by = Phaser.Math.Between(100, 1900);
-    const b = buildings.create(bx, by, 'building_full');
-    b.setData('state', 0);
-    b.setInteractive();
-    b.on('pointerdown', () => {
-      const state = b.getData('state');
-      if (state === 0) {
-        b.setTexture('building_damaged');
-        b.setData('state', 1);
-      } else if (state === 1) {
-        b.setTexture('building_destroyed');
-        b.setData('state', 2);
-      }
-    });
-  }
-
-  // random monsters
-  for (let i = 0; i < 20; i++) {
-    const mx = Phaser.Math.Between(100, 1900);
-    const my = Phaser.Math.Between(100, 1900);
-    monsters.create(mx, my, 'monster');
-  }
+  // buildings and monsters will be created when server sends world data
 
   // joystick using nipplejs
   joystick = nipplejs.create({
@@ -142,6 +121,20 @@ function create() {
     });
   });
 
+  socket.on('worldData', function (data) {
+    data.buildings.forEach(info => createBuilding(self, info));
+    data.monsters.forEach(info => createMonster(self, info));
+  });
+
+  socket.on('buildingUpdated', function (info) {
+    const b = buildingMap[info.id];
+    if (b) {
+      const textures = ['building_full', 'building_damaged', 'building_destroyed'];
+      b.setTexture(textures[info.state]);
+      b.setData('state', info.state);
+    }
+  });
+
   socket.on('updateInventory', function (items) {
     inventory.length = 0;
     items.forEach(i => inventory.push(i));
@@ -159,6 +152,23 @@ function addOtherPlayers(self, playerInfo, id) {
   const other = self.add.sprite(playerInfo.x, playerInfo.y, 'otherTexture').setOrigin(0.5, 0.5).setDisplaySize(40, 40);
   other.playerId = id;
   otherPlayers.add(other);
+}
+
+function createBuilding(self, info) {
+  const textures = ['building_full', 'building_damaged', 'building_destroyed'];
+  const b = buildings.create(info.x, info.y, textures[info.state]);
+  b.setData('id', info.id);
+  b.setData('state', info.state);
+  b.setInteractive();
+  b.on('pointerdown', () => {
+    socket.emit('damageBuilding', b.getData('id'));
+  });
+  buildingMap[info.id] = b;
+}
+
+function createMonster(self, info) {
+  const m = monsters.create(info.x, info.y, 'monster');
+  monsterMap[info.id] = m;
 }
 
 function update() {

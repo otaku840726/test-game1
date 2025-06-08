@@ -2,6 +2,7 @@ body {
   margin: 0;
   overflow: hidden;
   font-family: sans-serif;
+  background: #228b22;
 }
 #inventory {
   position: absolute;
@@ -18,4 +19,9 @@ body {
   bottom: 20px;
   width: 100px;
   height: 100px;
+}
+
+canvas {
+  display: block;
+  margin: 0 auto;
 }
