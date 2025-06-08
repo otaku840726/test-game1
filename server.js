@@ -7,6 +7,18 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// generate a simple shared world
+const world = { buildings: [], monsters: [] };
+function randomPos() {
+  return Math.floor(Math.random() * 1800) + 100;
+}
+for (let i = 0; i < 20; i++) {
+  world.buildings.push({ id: i, x: randomPos(), y: randomPos(), state: 0 });
+}
+for (let i = 0; i < 20; i++) {
+  world.monsters.push({ id: i, x: randomPos(), y: randomPos() });
+}
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // simple in-memory state for players
@@ -17,6 +29,8 @@ io.on('connection', socket => {
   players[socket.id] = { x: 1000, y: 1000, equipment: null };
   // send current players to new player
   socket.emit('currentPlayers', players);
+  // send world layout
+  socket.emit('worldData', world);
   // notify existing players of new player
   socket.broadcast.emit('newPlayer', { id: socket.id, data: players[socket.id] });
 
@@ -25,6 +39,14 @@ io.on('connection', socket => {
       players[socket.id].x = data.x;
       players[socket.id].y = data.y;
       io.emit('playerMoved', { id: socket.id, x: data.x, y: data.y });
+    }
+  });
+
+  socket.on('damageBuilding', id => {
+    const b = world.buildings.find(b => b.id === id);
+    if (b && b.state < 2) {
+      b.state += 1;
+      io.emit('buildingUpdated', b);
     }
   });
 
