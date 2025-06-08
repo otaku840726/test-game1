@@ -1,4 +1,4 @@
-const socket = io();
+const socket = typeof io !== 'undefined' ? io() : { on: () => {}, emit: () => {} };
 
 let scene, camera, renderer;
 let player;
