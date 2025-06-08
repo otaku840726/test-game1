@@ -1,6 +1,9 @@
 # Medieval Survival Demo
 
-This small demo uses Node, Express and Socket.io with Phaser.
+This small demo uses Node, Express and Socket.io with Three.js. Buildings,
+monsters and players are rendered as simple 3D meshes. Their relative size is
+scaled so buildings are largest, monsters are larger than the players, and the
+players are the smallest.
 
 ## Running the game
 
