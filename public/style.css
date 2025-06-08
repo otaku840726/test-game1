@@ -11,3 +11,11 @@ body {
   padding: 10px;
   color: white;
 }
+
+#joystick {
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+  width: 100px;
+  height: 100px;
+}

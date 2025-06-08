@@ -14,7 +14,7 @@ const players = {};
 
 io.on('connection', socket => {
   console.log('a user connected', socket.id);
-  players[socket.id] = { x: 400, y: 300, equipment: null };
+  players[socket.id] = { x: 1000, y: 1000, equipment: null };
   // send current players to new player
   socket.emit('currentPlayers', players);
   // notify existing players of new player
