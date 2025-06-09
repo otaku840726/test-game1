@@ -1,23 +1,48 @@
-# Medieval Survival Demo
+# 中世紀戰鬥生存網頁3D遊戲 (Medieval Combat Survival 3D Web Game)
 
-This small demo uses Node, Express and Socket.io with a minimal in-browser 3D
-engine. Buildings, monsters and players are rendered as simple meshes and their
-relative size is scaled so buildings are largest, monsters are larger than the
-players and the players are the smallest. A virtual joystick is provided in the
-bottom left corner for movement.
+這是一個開放世界的中世紀歐洲風格3D網頁遊戲，使用Three.js、Socket.IO和Express構建。
 
-## Running the game
+## 遊戲特色
 
-1. Install dependencies
+- **開放世界**：自由探索隨機生成的中世紀歐洲風格世界
+- **多樣角色**：城鎮、建築物、野獸、食人魔、哥布林、野豬人、士兵、土著、騎士、巨人
+- **隨機生成**：每次遊戲都有不同的世界布局和角色分佈
+- **可破壞環境**：所有建築物都可以被破壞，並有相應的視覺效果
+- **角色傷害系統**：角色受到傷害時會有視覺效果，外觀會隨著受損程度變化
+- **多人遊戲**：玩家可以在同一世界中看到彼此並互動
+- **裝備系統**：角色可以穿戴不同裝備，並在視覺上展示
+- **掉落系統**：擊敗怪物後有機會掉落裝備，可供玩家拾取
+- **物品欄系統**：玩家可以管理拾取的物品和裝備
+- **無盡探索**：遊戲沒有終點，可以無限探索和戰鬥
+- **觸控支持**：左下角有虛擬搖桿，方便移動控制
+- **城鎮起點**：玩家初始在城鎮中心，沒有裝備
+
+## 技術實現
+
+- **前端**：Three.js (3D渲染)、Socket.IO (實時通信)、NippleJS (虛擬搖桿)
+- **後端**：Node.js、Express、Socket.IO
+
+## 運行遊戲
+
+1. 安裝依賴
    ```
    npm install
    ```
-2. Start the server
+2. 啟動服務器
    ```
    npm start
    ```
-3. Open `http://localhost:3000` in your browser.
+3. 在瀏覽器中打開 `http://localhost:3000`
 
-If you open `public/index.html` directly without running the server,
-the game will now create a local world so you can still move around,
-but multiplayer features will be disabled.
+### 離線模式
+
+如果直接在瀏覽器中打開 `public/index.html` 而不啟動服務器，
+遊戲會創建一個本地世界供你探索，但多人功能將被禁用。
+
+## 遊戲操作
+
+- **移動**：使用左下角的虛擬搖桿
+- **攻擊**：點擊怪物
+- **破壞建築**：點擊建築物
+- **拾取物品**：點擊地上的物品
+- **裝備管理**：使用右上角的物品欄界面
