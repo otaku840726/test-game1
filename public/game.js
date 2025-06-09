@@ -10,6 +10,28 @@ const joystickForce = { x: 0, y: 0 };
 const inventory = [];
 let offlineMode = false;
 
+function createGroundTexture() {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#5a7c36';
+  ctx.fillRect(0, 0, size, size);
+  for (let i = 0; i < 2000; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const r = Math.random() * 6 + 2;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = Math.random() > 0.5 ? '#4b6b30' : '#6a8f40';
+    ctx.fill();
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(20, 20);
+  return tex;
+}
+
 init();
 animate();
 
@@ -37,7 +59,7 @@ function init() {
   scene.add(light);
 
   const groundGeo = new THREE.PlaneGeometry(2000, 2000);
-  const groundMat = new THREE.MeshLambertMaterial({ color: 0x668800 });
+  const groundMat = new THREE.MeshLambertMaterial({ map: createGroundTexture() });
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
@@ -112,7 +134,7 @@ function init() {
       offlineMode = true;
       initOfflineWorld();
     }
-  }, 1500);
+  }, 500);
 }
 
 function onWindowResize() {
@@ -136,29 +158,30 @@ function onPointerDown(event) {
 }
 
 function addPlayer(info) {
-  const geom = new THREE.BoxGeometry(10, 10, 10);
+  const geom = new THREE.CylinderGeometry(5, 5, 15, 8);
   const mat = new THREE.MeshStandardMaterial({ color: 0x3333ff });
   player = new THREE.Mesh(geom, mat);
-  player.position.set(info.x, 5, -info.y);
+  player.position.set(info.x, 7.5, -info.y);
   scene.add(player);
   updateCamera();
 }
 
 function addOtherPlayer(info, id) {
-  const geom = new THREE.BoxGeometry(10, 10, 10);
+  const geom = new THREE.CylinderGeometry(5, 5, 15, 8);
   const mat = new THREE.MeshStandardMaterial({ color: 0x00aa00 });
   const other = new THREE.Mesh(geom, mat);
-  other.position.set(info.x, 5, -info.y);
+  other.position.set(info.x, 7.5, -info.y);
   otherPlayers[id] = other;
   scene.add(other);
 }
 
 function createBuilding(info) {
   const colors = [0x8b4513, 0x996633, 0x555555];
-  const geom = new THREE.BoxGeometry(60, 60, 60);
+  const height = 60 + Math.random() * 40;
+  const geom = new THREE.BoxGeometry(60, height, 60);
   const mat = new THREE.MeshLambertMaterial({ color: colors[info.state] });
   const mesh = new THREE.Mesh(geom, mat);
-  mesh.position.set(info.x, 30, -info.y);
+  mesh.position.set(info.x, height / 2, -info.y);
   mesh.userData = { id: info.id, state: info.state };
   buildings[info.id] = mesh;
   scene.add(mesh);
@@ -166,7 +189,7 @@ function createBuilding(info) {
 
 function createMonster(info) {
   const geom = new THREE.SphereGeometry(15, 12, 12);
-  const mat = new THREE.MeshStandardMaterial({ color: 0x00aa00 });
+  const mat = new THREE.MeshStandardMaterial({ color: 0xaa0000 });
   const m = new THREE.Mesh(geom, mat);
   m.position.set(info.x, 15, -info.y);
   monsters[info.id] = m;
@@ -178,10 +201,10 @@ function initOfflineWorld() {
     return Math.floor(Math.random() * 1800) + 100;
   }
   addPlayer({ x: 1000, y: 1000 });
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 30; i++) {
     createBuilding({ id: i, x: randomPos(), y: randomPos(), state: 0 });
   }
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 30; i++) {
     createMonster({ id: i, x: randomPos(), y: randomPos() });
   }
   document.getElementById('inventory').innerText = 'Offline Mode';
