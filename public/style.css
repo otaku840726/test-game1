@@ -3,6 +3,7 @@ body {
   overflow: hidden;
   font-family: sans-serif;
   background: #c2b280;
+  touch-action: none;
 }
 #inventory {
   position: absolute;
