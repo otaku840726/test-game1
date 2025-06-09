@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中世紀戰鬥生存遊戲</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="loading-screen">
+        <div class="loading-content">
+            <h1>中世紀戰鬥生存遊戲</h1>
+            <div class="loading-bar-container">
+                <div id="loading-bar"></div>
+            </div>
+            <p id="loading-text">載入中...</p>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <div id="joystick-container"></div>
+        <div id="inventory-button">物品欄</div>
+        <div id="inventory-panel" class="hidden">
+            <div class="panel-header">
+                <h2>物品欄</h2>
+                <button id="close-inventory">X</button>
+            </div>
+            <div class="panel-content">
+                <div id="equipment-slots">
+                    <div class="equipment-slot" data-slot="head">
+                        <img src="assets/ui/helmet-slot.png" alt="頭盔">
+                    </div>
+                    <div class="equipment-slot" data-slot="body">
+                        <img src="assets/ui/armor-slot.png" alt="盔甲">
+                    </div>
+                    <div class="equipment-slot" data-slot="weapon">
+                        <img src="assets/ui/weapon-slot.png" alt="武器">
+                    </div>
+                    <div class="equipment-slot" data-slot="shield">
+                        <img src="assets/ui/shield-slot.png" alt="盾牌">
+                    </div>
+                </div>
+                <div id="inventory-slots"></div>
+            </div>
+        </div>
+        <div id="health-bar-container">
+            <div id="health-bar"></div>
+        </div>
+    </div>
+
+    <!-- Socket.IO -->
+    <script src="/socket.io/socket.io.js"></script>
+
+    <!-- Three.js and dependencies - using defer to ensure they load in order -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.177.0/build/three.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.177.0/examples/js/loaders/GLTFLoader.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.177.0/examples/js/controls/OrbitControls.js" defer></script>
+
+    <!-- NippleJS for joystick -->
+    <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.10.1/dist/nipplejs.min.js"></script>
+
+    <!-- Game Scripts -->
+    <script src="js/utils.js" defer></script>
+    <script src="js/models.js" defer></script>
+    <script src="js/world.js" defer></script>
+    <script src="js/characters.js" defer></script>
+    <script src="js/player.js" defer></script>
+    <script src="js/ui.js" defer></script>
+
+    <!-- Initialize game after all scripts are loaded -->
+    <script>
+        // Function to check if THREE is defined and load game.js
+        function loadGameWhenThreeIsReady() {
+            if (typeof THREE === 'undefined') {
+                console.log('Waiting for THREE to be defined...');
+                setTimeout(loadGameWhenThreeIsReady, 100); // Check again after 100ms
+                return;
+            }
+
+            console.log('THREE is defined, loading game.js');
+            // Load game.js dynamically after ensuring THREE is available
+            const gameScript = document.createElement('script');
+            gameScript.src = 'js/game.js';
+            document.body.appendChild(gameScript);
+        }
+
+        // Start checking when the DOM is loaded
+        window.addEventListener('DOMContentLoaded', function() {
+            loadGameWhenThreeIsReady();
+        });
+    </script>
+</body>
+</html>
