@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+// Load Three.js served from node_modules without using a bundler
+import * as THREE from '/vendor/three.module.js';
 import io from '/socket.io/socket.io.js';
 
 const socket = io();
