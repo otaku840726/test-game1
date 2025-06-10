@@ -16,6 +16,9 @@ const io = new Server(httpServer, {
 });
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use('/vendor', express.static(
+  path.join(__dirname, '..', 'node_modules', 'three', 'build')
+));
 
 const players = new Map();
 
