@@ -14,6 +14,6 @@ This project is a fresh start for a simple networked 3D game built with Three.js
    ```
 3. Open `http://localhost:3000` in your browser.
 
-The server exposes Three.js from `node_modules` at `/vendor/three.module.js`, so the client can load it without relying on a CDN or bundler.
+The server exposes Three.js and Socket.IO from `node_modules` under `/vendor` so the client can load them without relying on a CDN or bundler.
 
 This rewrite contains only the minimal features: a basic scene and networked player cubes. More functionality can be built on top of this foundation.

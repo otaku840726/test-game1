@@ -1,6 +1,6 @@
 // Load Three.js served from node_modules without using a bundler
 import * as THREE from '/vendor/three.module.js';
-import io from '/socket.io/socket.io.js';
+import { io } from '/vendor/socket.io.esm.min.js';
 
 const socket = io();
 const scene = new THREE.Scene();
